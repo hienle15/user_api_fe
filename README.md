@@ -5,7 +5,7 @@ This is the frontend for the **User Management API** built with **React**, **Vit
 ##  Live Project
 
  Frontend: [https://github.com/hienle15/user\_api\_fe](https://github.com/hienle15/user_api_fe)
- Backend: [https://github.com/hienle15/user_api](https://github.com/hienle15/user_api)
+
 
 ##  Features
 
