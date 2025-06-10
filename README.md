@@ -4,7 +4,9 @@ This is the frontend for the **User Management API** built with **React**, **Vit
 
 ##  Live Project
 
- Frontend: [https://github.com/hienle15/users_page.git](https://github.com/hienle15/users_page.git)
+ Frontend: [https://github.com/hienle15/users_page.git]
+ Backend [https://github.com/hienle15/User_manage_api]
+
 
 
 ##  Features
@@ -32,7 +34,7 @@ npm install
 ### 1. Clone the repository
 
 
-git clone https://github.com/hienle15/user_api_fe.git
+git clone https://github.com/hienle15/users_page.git
 
 
 
