@@ -191,6 +191,7 @@ export default function ProjectForm() {
                                     <DialogTitle>Edit Project</DialogTitle>
                                 </DialogHeader>
                                 <ProjectFormDialog
+                                    key={`edit-project-${row.original.id}`}
                                     initialData={row.original}
                                     onSubmit={async (data) => {
                                         if (!row?.original?.id) {
@@ -289,6 +290,7 @@ export default function ProjectForm() {
                                     <DialogTitle>Add Project</DialogTitle>
                                 </DialogHeader>
                                 <ProjectFormDialog
+                                    key={`add-project`}
                                     onSubmit={async (data) => {
                                         try {
                                             const result = await dispatch(createProject(data)).unwrap();
@@ -469,21 +471,33 @@ function ProjectFormDialog({
         // return { ...initialData, user_ids: initialUserIds };
         return { ...initialData, id: initialData.id, user_ids: initialUserIds };
     });
-
+    // Khi form Edit được mở, ProjectFormDialog nhận initialData.user_ids, nhưng đôi khi user_ids lại là string JSON (ví dụ: "[1,2]") 
+    // thay vì mảng thực tế ([1, 2]). Điều này khiến formData.user_ids.includes(user.id) không hoạt động đúng, 
+    // vì formData.user_ids là một chuỗi chứ không phải mảng số.
+    //Sửa useEffect trong ProjectFormDialog để chắc chắn user_ids luôn là mảng số.
     useEffect(() => {
-        // Nếu cần refresh lại khi initialData thay đổi (ví dụ mở dialog edit khác),
-        // cập nhật state nếu formData vẫn là giá trị mặc định (có thể dùng một flag nếu cần)
-        // Với cách này, khi người dùng sửa đổi thì state không bị reset.
-        // Ví dụ: chỉ cập nhật nếu formData.name rỗng.
-        if (!formData.name) {
-            const initialUserIds = Array.isArray(initialData.user_ids)
-                ? initialData.user_ids.map((id) => Number(id)).filter((id) => !isNaN(id))
-                : initialData.user_id
-                    ? [Number(initialData.user_id)]
-                    : [];
-            setFormData({ ...initialData, id: initialData.id, user_ids: initialUserIds });
+        let userIds = [];
+
+        if (Array.isArray(initialData.user_ids)) {
+            userIds = initialData.user_ids.map((id) => Number(id));
+        } else if (typeof initialData.user_ids === "string") {
+            try {
+                const parsed = JSON.parse(initialData.user_ids);
+                if (Array.isArray(parsed)) {
+                    userIds = parsed.map((id) => Number(id));
+                }
+            } catch (e) {
+                console.error("Không thể parse user_ids:", initialData.user_ids);
+            }
         }
-    }, [initialData]);
+
+        setFormData({
+            ...initialData,
+            id: initialData.id,
+            user_ids: userIds
+        });
+    }, []);
+
 
     useEffect(() => {
         if (!users || users.length === 0) {
@@ -511,7 +525,7 @@ function ProjectFormDialog({
         const payload = {
             ...formData,
             user_ids: formData.user_ids || [],
-            id: formData.id|| undefined, // Ensure id is included if it exists
+            id: formData.id || undefined, // Ensure id is included if it exists
         };
         if (payload.user_id !== undefined) delete payload.user_id;
         if (onSubmit) onSubmit(payload);
@@ -540,6 +554,7 @@ function ProjectFormDialog({
                             checked={formData.user_ids.includes(user.id)}
                             onCheckedChange={() => toggleUser(user.id)}
                         />
+
                         <span className="text-sm">{user.name}</span>
                     </label>
                 ))}
