@@ -1,5 +1,12 @@
 // src/App.jsx
 import React from "react";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "./components/ui/select";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import UserList from "./features/UserList";
 import ProjectForm from "./features/project/projectform";
@@ -12,9 +19,9 @@ function LayoutWithSidebar() {
   const location = useLocation();
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex flex-col md:flex-row">
       {/* Sidebar */}
-      <aside className="w-1/6 bg-gray-100 p-4">
+      <aside className="w-full md:w-1/6 bg-gray-100 p-4 md:block hidden">
         <div className="space-y-1">
           <Button
             onClick={() => navigate("/")}
@@ -31,14 +38,31 @@ function LayoutWithSidebar() {
         </div>
       </aside>
 
+      {/* Mobile Sidebar Toggle (optional) */}
+      <div className="md:hidden bg-gray-100 p-2">
+        <Select
+          value={location.pathname}
+          onValueChange={(value) => navigate(value)}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select page" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="/">Users</SelectItem>
+            <SelectItem value="/projects">Projects</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Main content area */}
-      <main className="flex-1 ">
+      <main className="flex-1 p-4">
         <Routes>
           <Route path="/" element={<UserList />} />
           <Route path="/projects" element={<ProjectForm />} />
         </Routes>
       </main>
     </div>
+
   );
 }
 

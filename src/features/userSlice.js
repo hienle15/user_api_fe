@@ -1,14 +1,25 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from 'axios';
 const API_URL = import.meta.env.VITE_API_URL;
+
+
+const usersChannel = new BroadcastChannel('users-channel');
+//fectch user
 export const fetchUsers = createAsyncThunk('users/fetchUsers', async () => {
     const res = await axios.get(`${API_URL}/users`);
 
     return res.data.data;
 });
+// create
 export const createUser = createAsyncThunk('users/createUser', async (userData, { rejectWithValue }) => {
     try {
-      const res = await axios.post(`${API_URL}/users`, userData);
+        const res = await axios.post(`${API_URL}/users`, userData);
+        // giao thức giưã các tab
+        usersChannel.postMessage({
+            type: 'USER_CREATED',
+            user: res.data.data,
+            timestamp: Date.now()
+        });
         return res.data;
     } catch (error) {
         // Return the complete error response
@@ -18,10 +29,17 @@ export const createUser = createAsyncThunk('users/createUser', async (userData, 
         });
     }
 });
+//update
 export const updateUser = createAsyncThunk('users/updateUser',
     async ({ id, userData }, { rejectWithValue }) => {
         try {
-          const res = await axios.put(`${API_URL}/users/${id}`, userData);
+            const res = await axios.put(`${API_URL}/users/${id}`, userData);
+            //giao thức giữa các tab
+            usersChannel.postMessage({
+                type: 'USER_UPDATED',
+                user: res.data.data,
+                timestamp: Date.now()
+            });
             return res.data;
         } catch (error) {
             // Return the complete error response
@@ -32,17 +50,25 @@ export const updateUser = createAsyncThunk('users/updateUser',
         }
     }
 );
+//delete
 export const deleteUser = createAsyncThunk(
     'users/deleteUser',
     async (id, { rejectWithValue }) => {
         try {
-         const res = await axios.delete(`${API_URL}/users/${id}`);
-            return { id, ...res.data }; // Return both id and response data
+            const res = await axios.delete(`${API_URL}/users/${id}`);
+            // giao thức giữa các tab
+            usersChannel.postMessage({
+                type: 'USER_DELETED',
+                id: Number(id),
+                timestamp: Date.now()
+            });
+            return { id: Number(id), ...res.data }; // Return both id and response data
         } catch (err) {
             return rejectWithValue(err.response?.data?.message || 'Delete failed');
         }
     }
 );
+//redux state
 const userSlice = createSlice({// tạo state ban đầu, định nghĩa reducers, tự động tạo action
     name: 'users',
     initialState: {

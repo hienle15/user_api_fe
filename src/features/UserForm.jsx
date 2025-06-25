@@ -31,12 +31,6 @@ const UserForm = ({ user, isEditing = false, onSuccess, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { name, email, age } = form;
-    if (!name || !email || !age) {
-      toastError("Error!", "Please fill in all the required information.");
-      return;
-    }
-
     try {
       if (isEditing && user?.id) {
         const result = await dispatch(updateUser({
@@ -59,14 +53,13 @@ const UserForm = ({ user, isEditing = false, onSuccess, onCancel }) => {
     } catch (err) {
       const errorMessage = err.message || err.error;
       toastError("Error!", errorMessage);
-      console.error('Validation error:', err);
     }
   };
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="w-[95%] max-w-xl mx-auto px-4 sm:px-6 md:px-8 py-6 space-y-6 bg-transparent shadow-none rounded-xl "
+      className="w-full max-w-xs sm:max-w-md md:max-w-lg mx-auto px-2 sm:px-4 md:px-8 py-4 sm:py-6 space-y-6 bg-transparent shadow-none rounded-xl"
     >
       <h2 className="text-xl font-bold text-center text-gray-700">
         {isEditing ? "Edit User" : "Create New User"}

@@ -43,9 +43,11 @@ import {
 } from "@/components/ui/dialog"
 import { toastSuccess } from "@/hooks/toast-utils";
 // Nhãn hiển thị thân thiện cho menu dropdown
+
+// Đảm bảo usersChannel được định nghĩa hoặc có thể truy cập toàn cục
+const usersChannel = new BroadcastChannel('users-channel');
 const columnLabels = {
   select: "Select",
-
   name: "Name",
   email: "Email",
   age: "Age",
@@ -66,6 +68,7 @@ const columns = [
         Name <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
+    // lấy giá trị của cột
     cell: (info) => (
       <span className="text-base font-medium text-gray-800">
         {info.getValue()}
@@ -90,11 +93,11 @@ const columns = [
     id: "actions",
     header: "Actions",
     cell: ({ row }) => {
-      const dispatch = useDispatch(); // Thêm dòng này
+      const dispatch = useDispatch(); //Gửi các action đến Redux store để cập nhật state. ví dụ dispatch(fetchUsers())
       const { toast } = useToast();
       const handleDelete = async () => {
         try {
-          await dispatch(deleteUser(row.original.id)).unwrap();
+          await dispatch(deleteUser(row.original.id)).unwrap();//.unwrap() giúp bắt được lỗi từ createAsyncThunk nếu có (giống try/catch của Promise).
           toastSuccess("Success!", "User delete successfull.");
           await dispatch(fetchUsers()); // Refresh the list after deletion
         } catch (err) {
@@ -110,22 +113,17 @@ const columns = [
         <div className="flex gap-2">
           <Dialog>
             <DialogTrigger asChild>
-              <Button
-                variant="ghost"
-                className="h-8 w-8 p-0 hover:bg-blue-100"
-                title="Edit user"
-              >
+              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-blue-100" title="Edit user" >
                 <Pencil className="h-4 w-4 text-blue-600" />
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
-
               <UserForm
-                user={row.original}
-                isEditing={true}
-                onSuccess={() => {
+                user={row.original}// truyền thông tin user hiện tại để hiện thị lên form 
+                isEditing={true}// đánh dấu đang ở chỉnh sửa 
+                onSuccess={() => {// khi chỉnh sửa thành công thì gọi fetchuser để load lại dữ liệu
                   dispatch(fetchUsers());
-                  document.querySelector('[data-state="open"]')?.click();
+                  document.querySelector('[data-state="open"]')?.click();// đóng mở modal sau khi thao tác thành công
                 }}
                 onCancel={() => {
                   document.querySelector('[data-state="open"]')?.click();
@@ -164,7 +162,7 @@ const columns = [
                     document.querySelector('[data-state="open"]')?.click();
                   }}
                 >
-                Delete
+                  Delete
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -180,6 +178,33 @@ const columns = [
 export default function UserList() {
   const dispatch = useDispatch();
   const { users, loading, error } = useSelector((state) => state.users);
+  const usersChannel = new BroadcastChannel('users-channel');
+  useEffect(() => {
+    // Xử lý message từ các tab khác
+    const handleChannelMessage = (event) => {
+      switch (event.data.type) {
+        case 'USER_CREATED':
+          // Kiểm tra trùng lặp trước khi fetch
+          const exists = users.some(u => u.id === event.data.user.id);
+          if (!exists) {
+            dispatch(fetchUsers());
+          }
+          break;
+        case 'USER_UPDATED':
+        case 'USER_DELETED':
+          dispatch(fetchUsers());
+          break;
+      }
+    };
+
+    usersChannel.addEventListener('message', handleChannelMessage);
+
+    // Cleanup
+    return () => {
+      usersChannel.removeEventListener('message', handleChannelMessage);
+      usersChannel.close();
+    };
+  }, [dispatch, users]);
 
   useEffect(() => {
     dispatch(fetchUsers());
@@ -219,20 +244,21 @@ export default function UserList() {
             placeholder="Filter emails..."
             value={table.getColumn("email")?.getFilterValue() ?? ""}
             onChange={(e) =>
-              table.getColumn("email")?.setFilterValue(e.target.value)
+              table.getColumn("email")?.setFilterValue(e.target.value)// giá trị người dùng nhập vào
             }
             className="w-full md:max-w-sm border-gray-300 shadow-sm focus:ring-purple-100"
           />
-
-          <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+          <div className="flex flex-col sm:flex-row gap-2 ite w-full md:w-auto">
             <Dialog>
               <DialogTrigger asChild>
-                <Button className="w-full sm:w-auto bg-gradient-to-r from-green-400 to-green-600 flex items-center justify-center gap-2 text-sm font-medium hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-green-300 transition-all duration-200">
+                <Button
+                  className="w-full sm:w-auto bg-gradient-to-r from-green-400 to-green-600 flex items-center justify-center gap-2 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-green-300 transition-all duration-200 py-2 px-4 rounded-md"
+                >
                   Add
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
 
+              <DialogContent className="w-[90%] sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl">
                 <UserForm
                   onSuccess={() => {
                     dispatch(fetchUsers());
@@ -241,6 +267,7 @@ export default function UserList() {
                 />
               </DialogContent>
             </Dialog>
+
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -271,15 +298,18 @@ export default function UserList() {
         <div className="rounded-xl border border-gray-100 shadow overflow-x-auto">
           <Table className="min-w-full bg-white">
             <TableHeader className="bg-blue-300">
-              {table.getHeaderGroups().map((group) => (
-                <TableRow key={group.id}>
-                  {group.headers.map((header) => (
+              {table.getHeaderGroups().map((group) => (// lấy danh sách các cột tiêu đề
+              //tr
+              <TableRow key={group.id}>
+                {/* th */}
+                  {group.headers.map((header) => (// mỗi nhóm có nhiều cột ( header)
                     <TableHead
                       key={header.id}
                       className="text-gray-700 font-bold text-xs md:text-sm px-2 md:px-4 py-2 md:py-3"
                     >
                       {header.isPlaceholder
                         ? null
+                        //render nội dun tiêu đề cột
                         : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   ))}
@@ -287,8 +317,8 @@ export default function UserList() {
               ))}
             </TableHeader>
             <TableBody>
-              {table.getRowModel().rows.length ? (
-                table.getRowModel().rows.map((row) => (
+              {table.getRowModel().rows.length ? (// lấy danh sách các dòng dữ liệu( lọc, sắp xếp,..), legnth kiểm tra có dòng hay không
+                table.getRowModel().rows.map((row) => (// duyệt qua từng row trong bảng, mỗi row đại diện 1 bản ghi
                   <TableRow
                     key={row.id}
                     className="hover:bg-purple-50 transition duration-300"
@@ -328,7 +358,7 @@ export default function UserList() {
             <span className="font-semibold">
               {table.getFilteredRowModel().rows.length}
             </span>{" "}
-             row (s)
+            row (s)
           </div>
 
           {/* Pagination - only visible when rows > 10 */}
